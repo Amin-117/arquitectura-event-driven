@@ -1,10 +1,13 @@
 # Atajos para la exposición. Cada target tiene su equivalente: npm run <target>
 # (en Windows sin make, usá directamente npm run ...)
 
-.PHONY: help up down order order-rejected order-nostock burst duplicate poison reset kill-notifications revive-notifications add-analytics scale-payments logs test
+.PHONY: help open-store up down order order-rejected order-nostock burst duplicate poison reset kill-notifications revive-notifications add-analytics scale-payments logs test
 
 help: ## Muestra esta ayuda
 	@node scripts/help.js
+
+open-store: ## Muestra las URLs de la tienda, el admin y el panel
+	@node scripts/open-store.js
 
 up: ## Levanta todo (redis + servicios + panel)
 	docker compose up --build -d

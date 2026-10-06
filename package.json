@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "help": "node scripts/help.js",
+    "open-store": "node scripts/open-store.js",
     "up": "docker compose up --build -d && node scripts/info.js",
     "down": "docker compose --profile extra down -v --remove-orphans",
     "order": "node scripts/order.js normal",

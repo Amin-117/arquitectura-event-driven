@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: MateShop — eventos
-  version: 1.0.0
+  version: 1.1.0
   description: |
     Contrato de eventos de MateShop. Todos los eventos se publican en el stream de Redis
     `mateshop.events` como un sobre CloudEvents 1.0 serializado en JSON dentro del campo `event`.
@@ -39,6 +39,12 @@ channels:
         $ref: '#/components/messages/orderConfirmed'
       orderCancelled:
         $ref: '#/components/messages/orderCancelled'
+      stockUpdated:
+        $ref: '#/components/messages/stockUpdated'
+      stockReplenished:
+        $ref: '#/components/messages/stockReplenished'
+      notificationSent:
+        $ref: '#/components/messages/notificationSent'
       demoReset:
         $ref: '#/components/messages/demoReset'
   dlq:
@@ -101,9 +107,12 @@ operations:
   inventoryPublishes:
     action: send
     channel: { $ref: '#/channels/events' }
+    summary: inventory publica el resultado de la reserva y cada cambio de stock (siembra, reserva, reposición)
     messages:
       - $ref: '#/channels/events/messages/stockReserved'
       - $ref: '#/channels/events/messages/stockFailed'
+      - $ref: '#/channels/events/messages/stockUpdated'
+      - $ref: '#/channels/events/messages/stockReplenished'
 
   # notifications
   notificationsReceives:
@@ -119,6 +128,30 @@ operations:
       - $ref: '#/channels/events/messages/paymentRefunded'
       - $ref: '#/channels/events/messages/orderConfirmed'
       - $ref: '#/channels/events/messages/orderCancelled'
+      - $ref: '#/channels/events/messages/demoReset'
+  notificationsPublishes:
+    action: send
+    channel: { $ref: '#/channels/events' }
+    summary: notifications publica cada "email" enviado para que la tienda lo muestre
+    messages: [{ $ref: '#/channels/events/messages/notificationSent' }]
+
+  # storefront
+  storefrontReceives:
+    action: receive
+    channel: { $ref: '#/channels/events' }
+    summary: la tienda arma su modelo de lectura (CQRS) — consumer group "storefront" creado con ID 0
+    messages:
+      - $ref: '#/channels/events/messages/orderCreated'
+      - $ref: '#/channels/events/messages/paymentApproved'
+      - $ref: '#/channels/events/messages/paymentRejected'
+      - $ref: '#/channels/events/messages/stockReserved'
+      - $ref: '#/channels/events/messages/stockFailed'
+      - $ref: '#/channels/events/messages/paymentRefunded'
+      - $ref: '#/channels/events/messages/orderConfirmed'
+      - $ref: '#/channels/events/messages/orderCancelled'
+      - $ref: '#/channels/events/messages/stockUpdated'
+      - $ref: '#/channels/events/messages/notificationSent'
+      - $ref: '#/channels/events/messages/demoReset'
 
   # analytics
   analyticsReceives:
@@ -143,6 +176,9 @@ operations:
       - $ref: '#/channels/events/messages/paymentRefunded'
       - $ref: '#/channels/events/messages/orderConfirmed'
       - $ref: '#/channels/events/messages/orderCancelled'
+      - $ref: '#/channels/events/messages/stockUpdated'
+      - $ref: '#/channels/events/messages/stockReplenished'
+      - $ref: '#/channels/events/messages/notificationSent'
       - $ref: '#/channels/events/messages/demoReset'
   dashboardPublishesReset:
     action: send
@@ -249,6 +285,43 @@ components:
               type: { const: order.cancelled }
               source: { const: /services/orders }
               data: { $ref: '#/components/schemas/OrderCancelledData' }
+    stockUpdated:
+      name: stock.updated
+      title: Stock actualizado
+      summary: Stock disponible de un producto después de un cambio (siembra, reserva o reposición).
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEvent'
+          - type: object
+            properties:
+              type: { const: stock.updated }
+              source: { const: /services/inventory }
+              correlationid: { type: string, examples: [stock-MATE-01] }
+              data: { $ref: '#/components/schemas/StockUpdatedData' }
+    stockReplenished:
+      name: stock.replenished
+      title: Stock repuesto
+      summary: Se agregaron unidades desde POST /admin/stock/:sku/replenish.
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEvent'
+          - type: object
+            properties:
+              type: { const: stock.replenished }
+              source: { const: /services/inventory }
+              data: { $ref: '#/components/schemas/StockReplenishedData' }
+    notificationSent:
+      name: notification.sent
+      title: Notificación enviada
+      summary: Un "email" que notifications le mandó al cliente.
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEvent'
+          - type: object
+            properties:
+              type: { const: notification.sent }
+              source: { const: /services/notifications }
+              data: { $ref: '#/components/schemas/NotificationSentData' }
     demoReset:
       name: demo.reset
       title: Reinicio de la demo
@@ -310,11 +383,14 @@ components:
     OrderCreatedData:
       type: object
       required: [orderId, customer, items, total]
+      description: email y cardLast4 se agregaron después como opcionales (cambio compatible, dataversion 1).
       properties:
         orderId: { type: string }
         customer: { type: string }
         items: { $ref: '#/components/schemas/Items' }
-        total: { type: number, minimum: 0 }
+        total: { type: number, minimum: 0, description: Calculado por orders con el catálogo }
+        email: { type: string, format: email }
+        cardLast4: { type: string, pattern: '^\d{4}$', description: Últimos 4 dígitos de la tarjeta (nunca el número completo) }
     PaymentApprovedData:
       type: object
       required: [orderId, customer, items, total, paymentId]
@@ -372,3 +448,24 @@ components:
         orderId: { type: string }
         customer: { type: string }
         reason: { type: string }
+    StockUpdatedData:
+      type: object
+      required: [sku, available]
+      properties:
+        sku: { type: string, examples: [MATE-01] }
+        available: { type: integer, minimum: 0 }
+    StockReplenishedData:
+      type: object
+      required: [sku, qty, available]
+      properties:
+        sku: { type: string }
+        qty: { type: integer, minimum: 1 }
+        available: { type: integer, minimum: 0 }
+    NotificationSentData:
+      type: object
+      required: [email, asunto, cuerpo, orderId]
+      properties:
+        email: { type: string, format: email }
+        asunto: { type: string, examples: ['¡Pedido confirmado! 🧉'] }
+        cuerpo: { type: string }
+        orderId: { type: string }
