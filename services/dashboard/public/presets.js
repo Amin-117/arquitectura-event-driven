@@ -1,21 +1,17 @@
 // Pedidos de ejemplo para cada escena. Lo usan el panel (navegador) y scripts/order.js (terminal).
-
-export const PRODUCTS = {
-  'MATE-01': { name: 'Mate de calabaza', price: 15000 },
-  'BOMBILLA-02': { name: 'Bombilla de alpaca', price: 8000 },
-  'YERBA-03': { name: 'Yerba 1 kg', price: 6500 },
-  'TERMO-04': { name: 'Termo 1 L', price: 45000 }
-}
+// Usan SKU del catálogo compartido; el total NO se manda: lo calcula orders con los precios del catálogo.
 
 const CUSTOMERS = ['Ana', 'Bruno', 'Carla', 'Diego', 'Elena', 'Facundo', 'Gabi', 'Hernán', 'Inés', 'Juan', 'Lucía', 'Martín']
 
+// Productos con stock holgado (TERMO-04 queda fuera: arranca en 0 a propósito).
+const EVERYDAY = ['MATE-01', 'MATE-05', 'BOMBILLA-02', 'BOMBILLA-07', 'YERBA-08', 'AZUCARERA-10']
+
 const pick = (list) => list[Math.floor(Math.random() * list.length)]
 
-const withTotal = (customer, items) => ({
-  customer,
-  items,
-  total: items.reduce((sum, { sku, qty }) => sum + PRODUCTS[sku].price * qty, 0)
-})
+const emailOf = (name) =>
+  `${name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()}@ejemplo.com`
+
+const order = (customer, items) => ({ customer, email: emailOf(customer), cardNumber: '4111111111111111', items })
 
 /**
  * Arma el cuerpo de POST /orders para una escena.
@@ -25,17 +21,17 @@ export function buildOrder(kind) {
   const customer = pick(CUSTOMERS)
   switch (kind) {
     case 'rechazado':
-      // 7 mates + 2 bombillas = $121.000 > límite de $100.000
-      return withTotal(customer, [{ sku: 'MATE-01', qty: 7 }, { sku: 'BOMBILLA-02', qty: 2 }])
+      // 7 × MATE-01 ($15.000) + 2 × BOMBILLA-02 ($8.000) = $121.000 > límite de $100.000
+      return order(customer, [{ sku: 'MATE-01', qty: 7 }, { sku: 'BOMBILLA-02', qty: 2 }])
     case 'sin-stock':
-      return withTotal(customer, [{ sku: 'TERMO-04', qty: 1 }])
+      return order(customer, [{ sku: 'TERMO-04', qty: 1 }])
     case 'rafaga':
-      return withTotal(customer, [{ sku: pick(['MATE-01', 'BOMBILLA-02', 'YERBA-03']), qty: 1 }])
+      return order(customer, [{ sku: pick([...EVERYDAY, 'YERBA-03', 'MATE-06']), qty: 1 }])
     case 'normal':
-    default:
-      return withTotal(
-        customer,
-        Math.random() < 0.5 ? [{ sku: 'MATE-01', qty: 1 }] : [{ sku: 'MATE-01', qty: 1 }, { sku: 'BOMBILLA-02', qty: 1 }]
-      )
+    default: {
+      const first = pick(EVERYDAY)
+      const second = pick(EVERYDAY.filter((s) => s !== first))
+      return order(customer, Math.random() < 0.5 ? [{ sku: first, qty: 1 }] : [{ sku: first, qty: 1 }, { sku: second, qty: 1 }])
+    }
   }
 }

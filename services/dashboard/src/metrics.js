@@ -1,7 +1,7 @@
 import { STREAM, DLQ_STREAM } from '@mateshop/contracts'
 import { DUPLICATES_KEY, HEARTBEAT_PREFIX } from '@mateshop/event-bus'
 
-export const SERVICES = ['orders', 'payments', 'inventory', 'notifications', 'analytics', 'dashboard']
+export const SERVICES = ['orders', 'payments', 'inventory', 'notifications', 'analytics', 'storefront', 'dashboard']
 
 /**
  * Junta los contadores que muestra el panel.

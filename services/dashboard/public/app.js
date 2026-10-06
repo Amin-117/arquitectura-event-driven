@@ -16,6 +16,7 @@ const NODES = {
   notifications: { x: 860, y: 305, sub: 'manda emails' },
   analytics: { x: 780, y: 520, sub: 'ventas · perfil extra' },
   dashboard: { x: 220, y: 520, sub: 'este panel (observa)', observer: true },
+  storefront: { x: 500, y: 545, sub: 'tienda · modelo de lectura' },
   dlq: { x: 140, y: 305, label: 'DLQ', sub: 'mateshop.dlq' }
 }
 
@@ -31,6 +32,9 @@ const TYPE_COLORS = {
   'payment.refunded': '#fbbf24',
   'order.confirmed': '#22c55e',
   'order.cancelled': '#f43f5e',
+  'stock.updated': '#7dd3fc',
+  'stock.replenished': '#a78bfa',
+  'notification.sent': '#5eead4',
   'demo.reset': '#94a3b8'
 }
 const typeColor = (type) => TYPE_COLORS[type] ?? '#e879f9'
@@ -163,6 +167,23 @@ function floatLabel(name, text, color) {
   ).onfinish = () => label.remove()
 }
 
+// ---------------------------------------------------------------------------
+// Filtro por pedido (?order=<id>): lo usa el enlace "Ver qué pasó por dentro" de la tienda
+// ---------------------------------------------------------------------------
+
+const ORDER_FILTER = new URLSearchParams(location.search).get('order')
+const matchesFilter = (entry) =>
+  !ORDER_FILTER || entry.event?.data?.orderId === ORDER_FILTER || entry.event?.correlationid === `order-${ORDER_FILTER}`
+const telemetryMatches = (t) => !ORDER_FILTER || t.correlationid === `order-${ORDER_FILTER}`
+
+function setupFilterBanner() {
+  if (!ORDER_FILTER) return
+  const banner = $('#filter-banner')
+  banner.hidden = false
+  banner.innerHTML = `🔎 Mostrando solo los eventos del pedido <b>#${escapeHtml(ORDER_FILTER)}</b> · <a href="/">quitar filtro</a>`
+  document.title = `Pedido #${ORDER_FILTER} · MateShop en vivo`
+}
+
 /** Animación de publicación: productor -> broker. */
 function animatePublish(entry) {
   const color = entry.valid ? typeColor(entry.event.type) : css('--danger')
@@ -254,7 +275,7 @@ function prependTimeline(node) {
 
 function renderTimeline() {
   const list = $('#timeline')
-  list.replaceChildren(...state.timeline.slice(0, 150).map((e) => timelineRow(e, false)))
+  list.replaceChildren(...state.timeline.filter(matchesFilter).slice(0, 150).map((e) => timelineRow(e, false)))
 }
 
 // ---------------------------------------------------------------------------
@@ -262,7 +283,9 @@ function renderTimeline() {
 // ---------------------------------------------------------------------------
 
 function renderOrders(flashId) {
-  const orders = [...state.orders.values()].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
+  const orders = [...state.orders.values()]
+    .filter((o) => !ORDER_FILTER || o.orderId === ORDER_FILTER)
+    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
   $('#orders-empty').hidden = orders.length > 0
   $('#orders').innerHTML = orders
     .slice(0, 60)
@@ -384,7 +407,7 @@ const SCENES = {
   },
   async rechazado() {
     const r = await postOrder('rechazado')
-    toast(`💸 Pedido #${r.orderId} por ${pesos(r.body.total)} (límite $100.000)`, 'warn')
+    toast(`💸 Pedido #${r.orderId} por ${pesos(r.total)} (límite $100.000)`, 'warn')
   },
   async 'sin-stock'() {
     const r = await postOrder('sin-stock')
@@ -484,15 +507,17 @@ function connect() {
     }
     state.timeline.unshift(entry)
     if (state.timeline.length > 200) state.timeline.length = 200
-    prependTimeline(timelineRow(entry, true))
     if (order) {
       state.orders.set(order.orderId, order)
       renderOrders(order.orderId)
     }
+    if (!matchesFilter(entry)) return
+    prependTimeline(timelineRow(entry, true))
     animatePublish(entry)
   })
 
   socket.on('telemetry', (t) => {
+    if (!telemetryMatches(t)) return
     animateTelemetry(t)
     if (t.kind === 'duplicate' || t.kind === 'dlq') prependTimeline(systemRow(t))
     if (t.kind === 'duplicate') toast(`⚠ ${t.group}: duplicado ignorado (${t.type})`, 'warn')
@@ -512,6 +537,7 @@ async function loadConfig() {
 }
 
 drawDiagram()
+setupFilterBanner()
 setupScenes()
 await loadConfig()
 connect()

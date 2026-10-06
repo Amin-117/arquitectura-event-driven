@@ -18,6 +18,7 @@
   --c-notifications: #2dd4bf;
   --c-analytics: #f472b6;
   --c-dashboard: #94a3b8;
+  --c-storefront: #fbbf24;
   --c-dlq: #f43f5e;
   --c-broker: #ef4444;
 
@@ -289,3 +290,7 @@ dialog pre { font-family: var(--mono); font-size: 1rem; background: #070b16; pad
   .scenes-body { grid-template-columns: 1fr; }
   .timeline li { grid-template-columns: 1fr; }
 }
+
+/* ---------- filtro por pedido (?order=) ---------- */
+.filter-banner { background: #3b2f12; color: #fde68a; border-bottom: 1px solid #a16207; padding: 8px 22px; font-size: 1rem; }
+.filter-banner a { color: #fff; font-weight: 700; }

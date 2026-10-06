@@ -39,7 +39,7 @@ if (isMain) {
   try {
     const { body, response, status } = await placeOrder(kind)
     const items = body.items.map((i) => `${i.qty}× ${i.sku}`).join(', ')
-    console.log(`🛒 ${body.customer} pidió ${items} por $${body.total.toLocaleString('es-AR')}`)
+    console.log(`🛒 ${body.customer} pidió ${items} por $${response.total.toLocaleString('es-AR')} (total calculado por el servidor)`)
     console.log(`   → HTTP ${status} Accepted · pedido #${response.orderId} en ${response.status}`)
     console.log('   … esperando que la saga termine (mirá el panel en http://localhost:8080)')
     const final = await waitForResult(response.orderId)
