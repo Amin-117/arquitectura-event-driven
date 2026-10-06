@@ -1,0 +1,19 @@
+.admin-tag { background: var(--gold); color: var(--ink); font-weight: 800; border-radius: 999px; padding: 4px 12px; font-size: 0.85rem; }
+.demo-note { background: var(--warn-soft); border: 1px dashed var(--gold); border-radius: 12px; padding: 10px 14px; margin: 0 0 18px; }
+main.container > .panel { margin-bottom: 22px; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.table-wrap { overflow-x: auto; }
+.admin-table { width: 100%; border-collapse: collapse; }
+.admin-table th { text-align: left; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 8px 10px; border-bottom: 2px solid var(--line); white-space: nowrap; }
+.admin-table td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.admin-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.admin-table .prod { display: flex; align-items: center; gap: 12px; font-weight: 700; }
+.admin-table .prod img { width: 48px; height: 48px; border-radius: 10px; }
+.admin-table .mono { font-family: Consolas, 'Cascadia Code', monospace; }
+.admin-table tr.flash td { animation: rowflash 1.4s ease; }
+@keyframes rowflash { 0%, 30% { background: var(--warn-soft); } }
+.replenish { display: flex; gap: 8px; align-items: center; }
+.replenish input { width: 80px; padding: 8px 10px; }
+.replenish .btn { padding: 8px 14px; white-space: nowrap; }
+.stock-num { font-size: 1.15rem; font-weight: 800; }
+.stock-num.zero { color: var(--danger); }

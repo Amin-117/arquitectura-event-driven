@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MateShop · Administración</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧉</text></svg>" />
+    <link rel="stylesheet" href="store.css" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/" class="logo"><span class="logo-mark">🧉</span><span class="logo-text">Mate<strong>Shop</strong></span></a>
+        <span class="admin-tag">Administración</span>
+        <nav class="header-actions">
+          <a class="icon-btn" href="/">Ver tienda</a>
+          <a class="icon-btn" id="tech-link" href="#" target="_blank" rel="noopener">Vista técnica ↗</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <p class="demo-note">🔓 Página sin login, solo para la demo. Los cambios de stock pasan por la API de inventory y llegan acá como eventos.</p>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Stock de productos</h2>
+          <span class="muted" id="stock-total"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead><tr><th>Producto</th><th>SKU</th><th class="num">Precio</th><th class="num">Stock</th><th>Reponer</th></tr></thead>
+            <tbody id="products"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Pedidos</h2>
+          <span class="muted" id="orders-total"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead><tr><th>Pedido</th><th>Cliente</th><th>Ítems</th><th class="num">Total</th><th>Estado</th><th>Detalle</th><th>Hora</th></tr></thead>
+            <tbody id="orders"></tbody>
+          </table>
+        </div>
+        <p class="empty-state" id="orders-empty" hidden>Todavía no hay pedidos.</p>
+      </section>
+    </main>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="admin.js"></script>
+  </body>
+</html>

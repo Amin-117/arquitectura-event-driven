@@ -1,1 +1,73 @@
-<!doctype html><title>MateShop</title>
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MateShop · Tienda de mates</title>
+    <meta name="description" content="Mates, bombillas, yerbas y accesorios con envío gratis." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧉</text></svg>" />
+    <link rel="stylesheet" href="store.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="#/" class="logo" aria-label="MateShop, ir al inicio">
+          <span class="logo-mark">🧉</span>
+          <span class="logo-text">Mate<strong>Shop</strong></span>
+        </a>
+
+        <label class="search">
+          <span class="sr-only">Buscar productos</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+          <input id="search" type="search" placeholder="Buscar mates, yerbas, termos…" autocomplete="off" />
+        </label>
+
+        <nav class="header-actions" aria-label="Acciones">
+          <a href="#/mis-pedidos" class="icon-btn" title="Mis pedidos">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" /><path d="M9 8h6M9 12h6" /></svg>
+            <span class="label">Mis pedidos</span>
+          </a>
+          <div class="inbox-wrap">
+            <button id="bell" class="icon-btn" title="Notificaciones" aria-haspopup="true" aria-expanded="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>
+              <span class="badge" id="bell-badge" hidden>0</span>
+            </button>
+            <div id="inbox" class="inbox" hidden>
+              <div class="inbox-head"><strong>Tus emails</strong><span id="inbox-email" class="muted"></span></div>
+              <ul id="inbox-list"></ul>
+            </div>
+          </div>
+          <button id="cart-btn" class="icon-btn cart-btn" title="Carrito">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.4 11h10.2L20 7H6.3" /><circle cx="9" cy="19" r="1.5" /><circle cx="17" cy="19" r="1.5" /></svg>
+            <span class="label">Carrito</span>
+            <span class="badge" id="cart-badge" hidden>0</span>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main id="view" class="container" tabindex="-1"></main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <span>🧉 MateShop · tienda de demostración, los pagos son simulados</span>
+        <span><a id="tech-link" href="#" target="_blank" rel="noopener">Vista técnica (eventos) ↗</a> · <a href="/admin">Administración</a></span>
+      </div>
+    </footer>
+
+    <div id="overlay" class="overlay" hidden></div>
+    <aside id="cart" class="drawer" aria-label="Carrito" aria-hidden="true">
+      <div class="drawer-head">
+        <h2>Tu carrito</h2>
+        <button id="cart-close" class="icon-btn" aria-label="Cerrar carrito">✕</button>
+      </div>
+      <div id="cart-body" class="drawer-body"></div>
+      <div id="cart-foot" class="drawer-foot"></div>
+    </aside>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="store.js"></script>
+  </body>
+</html>

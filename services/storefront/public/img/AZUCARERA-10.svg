@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img">
+  <rect width="400" height="400" fill="#f1e6d3"/>
+  <circle cx="200" cy="205" r="150" fill="#fffaf0" opacity="0.55"/>
+  <ellipse cx="200" cy="345" rx="120" ry="16" fill="#3b2a1e" opacity="0.12"/>
+
+  <rect x="95" y="160" width="100" height="160" rx="14" fill="#c2622d"/>
+  <rect x="88" y="145" width="114" height="28" rx="10" fill="#9e4a1d"/>
+  <rect x="110" y="215" width="70" height="40" rx="8" fill="#fbf6ec"/>
+  <text x="145" y="242" text-anchor="middle" font-family="Georgia, serif" font-size="15" font-weight="700" fill="#9e4a1d">AZÚCAR</text>
+  <rect x="210" y="140" width="100" height="180" rx="14" fill="#3f6b3a"/>
+  <rect x="203" y="125" width="114" height="28" rx="10" fill="#2f5229"/>
+  <rect x="225" y="205" width="70" height="40" rx="8" fill="#fbf6ec"/>
+  <text x="260" y="232" text-anchor="middle" font-family="Georgia, serif" font-size="15" font-weight="700" fill="#2f5229">YERBA</text>
+</svg>
