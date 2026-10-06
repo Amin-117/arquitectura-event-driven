@@ -142,7 +142,7 @@ function renderCart() {
           <strong>${pesos(p.price * i.qty)}</strong>
           <button class="link-btn" data-remove="${p.sku}">Quitar</button>
         </div>
-        ${over ? `<div class="warn">Solo quedan ${p.available} en stock. Lo confirmamos al procesar el pago.</div>` : ''}
+        ${over ? `<div class="warn">${p.available === 0 ? 'Se agotó mientras lo tenías en el carrito' : `Solo quedan ${p.available} en stock`}. Lo confirmamos al procesar el pago.</div>` : ''}
       </div>`
     })
     .join('')

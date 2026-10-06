@@ -12,7 +12,7 @@ El pedido original deja algunos puntos abiertos. La regla acordada fue: **ante l
 | # | Tema | Qué elegimos | Por qué |
 |---|---|---|---|
 | 1 | Telemetría del bus (procesado, reintento, duplicado, DLQ) | Redis **Pub/Sub** en el canal `mateshop.telemetry`, no persistida | No ensucia el stream de negocio ni la ven los demás grupos. Si el panel no está conectado, se pierde (no importa). |
-| 2 | Escena "Evento envenenado" | El panel publica un `order.created` que **no cumple el schema** | Va a la DLQ al instante en payments y notifications (los grupos que procesan ese tipo). El camino "3 intentos fallidos → DLQ" está cubierto por `tests/dlq.test.js`. |
+| 2 | Escena "Evento envenenado" | El panel publica un `order.created` que **no cumple el schema** | Va a la DLQ al instante en payments, notifications y storefront (los grupos que procesan ese tipo). El camino "3 intentos fallidos → DLQ" está cubierto por `tests/dlq.test.js`. |
 | 3 | Escena "Reenviar último evento" | Reenvía el **último evento de negocio válido** (ignora `demo.reset`, los inválidos y los del panel) con el mismo `id` | Así siempre muestra "duplicado ignorado" en algún servicio. |
 | 4 | Escenas de pedidos desde el panel | Las hace **el navegador** contra `POST :3000/orders` (con CORS) | El servidor del panel nunca llama por HTTP a otro servicio. |
 | 5 | Escenas duplicado / veneno / reinicio | Las ejecuta el **servidor del panel** directamente sobre Redis | Son herramientas de demo, no parte del negocio. |
