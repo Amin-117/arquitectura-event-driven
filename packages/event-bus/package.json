@@ -1,0 +1,13 @@
+{
+  "name": "@mateshop/event-bus",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Bus de eventos sobre Redis Streams: publish, subscribe, idempotencia, reintentos y DLQ",
+  "exports": "./src/index.js",
+  "dependencies": {
+    "@mateshop/contracts": "1.0.0",
+    "ioredis": "^5.4.1",
+    "pino": "^9.5.0"
+  }
+}

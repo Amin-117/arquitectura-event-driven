@@ -1,0 +1,374 @@
+asyncapi: 3.0.0
+info:
+  title: MateShop — eventos
+  version: 1.0.0
+  description: |
+    Contrato de eventos de MateShop. Todos los eventos se publican en el stream de Redis
+    `mateshop.events` como un sobre CloudEvents 1.0 serializado en JSON dentro del campo `event`.
+    Cada servicio lee con su propio consumer group y filtra por `type`.
+    Los eventos que fallan terminan en `mateshop.dlq`.
+  license:
+    name: MIT
+defaultContentType: application/json
+
+servers:
+  local:
+    host: localhost:6379
+    protocol: redis
+    description: Redis 7 levantado por docker compose (desde los contenedores es redis:6379)
+
+channels:
+  events:
+    address: mateshop.events
+    title: Stream de eventos de negocio
+    description: Stream único de Redis. Entrada = { event, type }.
+    messages:
+      orderCreated:
+        $ref: '#/components/messages/orderCreated'
+      paymentApproved:
+        $ref: '#/components/messages/paymentApproved'
+      paymentRejected:
+        $ref: '#/components/messages/paymentRejected'
+      stockReserved:
+        $ref: '#/components/messages/stockReserved'
+      stockFailed:
+        $ref: '#/components/messages/stockFailed'
+      paymentRefunded:
+        $ref: '#/components/messages/paymentRefunded'
+      orderConfirmed:
+        $ref: '#/components/messages/orderConfirmed'
+      orderCancelled:
+        $ref: '#/components/messages/orderCancelled'
+      demoReset:
+        $ref: '#/components/messages/demoReset'
+  dlq:
+    address: mateshop.dlq
+    title: Dead letter queue
+    description: Eventos que no cumplieron el schema o fallaron 3 entregas.
+    messages:
+      deadLetter:
+        $ref: '#/components/messages/deadLetter'
+
+operations:
+  # orders
+  ordersPublishesOrderCreated:
+    action: send
+    channel: { $ref: '#/channels/events' }
+    summary: orders publica order.created al recibir POST /orders
+    messages: [{ $ref: '#/channels/events/messages/orderCreated' }]
+  ordersPublishesResult:
+    action: send
+    channel: { $ref: '#/channels/events' }
+    summary: orders publica el resultado final del pedido
+    messages:
+      - $ref: '#/channels/events/messages/orderConfirmed'
+      - $ref: '#/channels/events/messages/orderCancelled'
+  ordersReceives:
+    action: receive
+    channel: { $ref: '#/channels/events' }
+    summary: orders resuelve el pedido (consumer group "orders")
+    messages:
+      - $ref: '#/channels/events/messages/paymentRejected'
+      - $ref: '#/channels/events/messages/stockReserved'
+      - $ref: '#/channels/events/messages/paymentRefunded'
+      - $ref: '#/channels/events/messages/demoReset'
+
+  # payments
+  paymentsReceives:
+    action: receive
+    channel: { $ref: '#/channels/events' }
+    summary: payments cobra (order.created) y compensa (stock.failed) — consumer group "payments"
+    messages:
+      - $ref: '#/channels/events/messages/orderCreated'
+      - $ref: '#/channels/events/messages/stockFailed'
+      - $ref: '#/channels/events/messages/demoReset'
+  paymentsPublishes:
+    action: send
+    channel: { $ref: '#/channels/events' }
+    messages:
+      - $ref: '#/channels/events/messages/paymentApproved'
+      - $ref: '#/channels/events/messages/paymentRejected'
+      - $ref: '#/channels/events/messages/paymentRefunded'
+
+  # inventory
+  inventoryReceives:
+    action: receive
+    channel: { $ref: '#/channels/events' }
+    summary: inventory reserva stock — consumer group "inventory"
+    messages:
+      - $ref: '#/channels/events/messages/paymentApproved'
+      - $ref: '#/channels/events/messages/demoReset'
+  inventoryPublishes:
+    action: send
+    channel: { $ref: '#/channels/events' }
+    messages:
+      - $ref: '#/channels/events/messages/stockReserved'
+      - $ref: '#/channels/events/messages/stockFailed'
+
+  # notifications
+  notificationsReceives:
+    action: receive
+    channel: { $ref: '#/channels/events' }
+    summary: notifications escucha todo el negocio y "manda" emails — consumer group "notifications"
+    messages:
+      - $ref: '#/channels/events/messages/orderCreated'
+      - $ref: '#/channels/events/messages/paymentApproved'
+      - $ref: '#/channels/events/messages/paymentRejected'
+      - $ref: '#/channels/events/messages/stockReserved'
+      - $ref: '#/channels/events/messages/stockFailed'
+      - $ref: '#/channels/events/messages/paymentRefunded'
+      - $ref: '#/channels/events/messages/orderConfirmed'
+      - $ref: '#/channels/events/messages/orderCancelled'
+
+  # analytics
+  analyticsReceives:
+    action: receive
+    channel: { $ref: '#/channels/events' }
+    summary: analytics suma ventas — consumer group "analytics" creado con ID 0 (reprocesa la historia)
+    messages:
+      - $ref: '#/channels/events/messages/orderConfirmed'
+      - $ref: '#/channels/events/messages/demoReset'
+
+  # dashboard
+  dashboardReceives:
+    action: receive
+    channel: { $ref: '#/channels/events' }
+    summary: el panel observa todo (consumer group "dashboard"), sin validar ni participar del negocio
+    messages:
+      - $ref: '#/channels/events/messages/orderCreated'
+      - $ref: '#/channels/events/messages/paymentApproved'
+      - $ref: '#/channels/events/messages/paymentRejected'
+      - $ref: '#/channels/events/messages/stockReserved'
+      - $ref: '#/channels/events/messages/stockFailed'
+      - $ref: '#/channels/events/messages/paymentRefunded'
+      - $ref: '#/channels/events/messages/orderConfirmed'
+      - $ref: '#/channels/events/messages/orderCancelled'
+      - $ref: '#/channels/events/messages/demoReset'
+  dashboardPublishesReset:
+    action: send
+    channel: { $ref: '#/channels/events' }
+    summary: escena "Reiniciar demo"
+    messages: [{ $ref: '#/channels/events/messages/demoReset' }]
+
+  eventBusSendsToDlq:
+    action: send
+    channel: { $ref: '#/channels/dlq' }
+    summary: el event-bus de cualquier servicio mueve acá los eventos que fallan
+    messages: [{ $ref: '#/channels/dlq/messages/deadLetter' }]
+
+components:
+  messages:
+    orderCreated:
+      name: order.created
+      title: Pedido creado
+      summary: Se registró un pedido en PENDING.
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEvent'
+          - type: object
+            properties:
+              type: { const: order.created }
+              source: { const: /services/orders }
+              data: { $ref: '#/components/schemas/OrderCreatedData' }
+    paymentApproved:
+      name: payment.approved
+      title: Pago aprobado
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEvent'
+          - type: object
+            properties:
+              type: { const: payment.approved }
+              source: { const: /services/payments }
+              data: { $ref: '#/components/schemas/PaymentApprovedData' }
+    paymentRejected:
+      name: payment.rejected
+      title: Pago rechazado
+      summary: El total supera el límite de $100.000.
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEvent'
+          - type: object
+            properties:
+              type: { const: payment.rejected }
+              source: { const: /services/payments }
+              data: { $ref: '#/components/schemas/PaymentRejectedData' }
+    stockReserved:
+      name: stock.reserved
+      title: Stock reservado
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEvent'
+          - type: object
+            properties:
+              type: { const: stock.reserved }
+              source: { const: /services/inventory }
+              data: { $ref: '#/components/schemas/StockReservedData' }
+    stockFailed:
+      name: stock.failed
+      title: Sin stock
+      summary: Falta stock de al menos un ítem; no se descontó nada.
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEvent'
+          - type: object
+            properties:
+              type: { const: stock.failed }
+              source: { const: /services/inventory }
+              data: { $ref: '#/components/schemas/StockFailedData' }
+    paymentRefunded:
+      name: payment.refunded
+      title: Pago devuelto (compensación)
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEvent'
+          - type: object
+            properties:
+              type: { const: payment.refunded }
+              source: { const: /services/payments }
+              data: { $ref: '#/components/schemas/PaymentRefundedData' }
+    orderConfirmed:
+      name: order.confirmed
+      title: Pedido confirmado
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEvent'
+          - type: object
+            properties:
+              type: { const: order.confirmed }
+              source: { const: /services/orders }
+              data: { $ref: '#/components/schemas/OrderConfirmedData' }
+    orderCancelled:
+      name: order.cancelled
+      title: Pedido cancelado
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEvent'
+          - type: object
+            properties:
+              type: { const: order.cancelled }
+              source: { const: /services/orders }
+              data: { $ref: '#/components/schemas/OrderCancelledData' }
+    demoReset:
+      name: demo.reset
+      title: Reinicio de la demo
+      summary: Cada servicio borra su estado; inventory vuelve a sembrar el stock.
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/CloudEvent'
+          - type: object
+            properties:
+              type: { const: demo.reset }
+              source: { const: /services/dashboard }
+              data:
+                type: object
+                required: [requestedBy]
+                properties:
+                  requestedBy: { type: string }
+    deadLetter:
+      name: dead-letter
+      title: Evento fallido
+      summary: Entrada de mateshop.dlq (campos planos del stream).
+      payload:
+        type: object
+        required: [event, error, group, service, deliveries, originalId, failedAt]
+        properties:
+          event: { type: string, description: Sobre CloudEvents original (JSON como texto) }
+          error: { type: string, examples: ['schema inválido: data.customer: requerido'] }
+          group: { type: string, examples: [payments] }
+          service: { type: string }
+          deliveries: { type: string, description: Número de entrega en el que falló }
+          originalId: { type: string, description: ID de la entrada en mateshop.events }
+          failedAt: { type: string, format: date-time }
+
+  schemas:
+    CloudEvent:
+      type: object
+      description: Sobre CloudEvents 1.0 con extensiones correlationid y dataversion.
+      required: [specversion, id, type, source, time, subject, datacontenttype, correlationid, dataversion, data]
+      properties:
+        specversion: { const: '1.0' }
+        id: { type: string, format: uuid, description: UUID v4; clave de idempotencia }
+        type: { type: string }
+        source: { type: string, pattern: '^/', examples: [/services/orders] }
+        time: { type: string, format: date-time }
+        subject: { type: string, examples: [order-ab12cd34] }
+        datacontenttype: { const: application/json }
+        correlationid: { type: string, examples: [order-ab12cd34] }
+        dataversion: { type: string, examples: ['1'] }
+        data: { type: object }
+    OrderItem:
+      type: object
+      required: [sku, qty]
+      properties:
+        sku: { type: string, examples: [MATE-01] }
+        qty: { type: integer, minimum: 1 }
+    Items:
+      type: array
+      minItems: 1
+      items: { $ref: '#/components/schemas/OrderItem' }
+    OrderCreatedData:
+      type: object
+      required: [orderId, customer, items, total]
+      properties:
+        orderId: { type: string }
+        customer: { type: string }
+        items: { $ref: '#/components/schemas/Items' }
+        total: { type: number, minimum: 0 }
+    PaymentApprovedData:
+      type: object
+      required: [orderId, customer, items, total, paymentId]
+      properties:
+        orderId: { type: string }
+        customer: { type: string }
+        items: { $ref: '#/components/schemas/Items' }
+        total: { type: number, minimum: 0 }
+        paymentId: { type: string }
+    PaymentRejectedData:
+      type: object
+      required: [orderId, customer, total, reason]
+      properties:
+        orderId: { type: string }
+        customer: { type: string }
+        total: { type: number, minimum: 0 }
+        reason: { type: string, examples: [límite excedido] }
+    StockReservedData:
+      type: object
+      required: [orderId, customer, items]
+      properties:
+        orderId: { type: string }
+        customer: { type: string }
+        items: { $ref: '#/components/schemas/Items' }
+    StockFailedData:
+      type: object
+      required: [orderId, customer, items, missing, reason]
+      properties:
+        orderId: { type: string }
+        customer: { type: string }
+        items: { $ref: '#/components/schemas/Items' }
+        missing: { type: array, items: { type: string } }
+        reason: { type: string, examples: [sin stock de TERMO-04] }
+    PaymentRefundedData:
+      type: object
+      required: [orderId, customer, total, paymentId, reason]
+      properties:
+        orderId: { type: string }
+        customer: { type: string }
+        total: { type: number, minimum: 0 }
+        paymentId: { type: string }
+        reason: { type: string }
+    OrderConfirmedData:
+      type: object
+      required: [orderId, customer, items, total]
+      properties:
+        orderId: { type: string }
+        customer: { type: string }
+        items: { $ref: '#/components/schemas/Items' }
+        total: { type: number, minimum: 0 }
+    OrderCancelledData:
+      type: object
+      required: [orderId, customer, reason]
+      properties:
+        orderId: { type: string }
+        customer: { type: string }
+        reason: { type: string }

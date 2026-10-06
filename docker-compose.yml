@@ -1,0 +1,63 @@
+name: mateshop
+
+x-service: &service
+  build: .
+  init: true
+  restart: unless-stopped
+  environment:
+    REDIS_URL: redis://redis:6379
+    LOG_LEVEL: info
+  depends_on:
+    redis:
+      condition: service_healthy
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  orders:
+    <<: *service
+    command: ["node", "services/orders/src/index.js"]
+    ports:
+      - "3000:3000"
+
+  payments:
+    <<: *service
+    command: ["node", "services/payments/src/index.js"]
+
+  inventory:
+    <<: *service
+    command: ["node", "services/inventory/src/index.js"]
+
+  notifications:
+    <<: *service
+    command: ["node", "services/notifications/src/index.js"]
+
+  # Se levanta en vivo durante la demo: npm run add-analytics
+  analytics:
+    <<: *service
+    profiles: ["extra"]
+    command: ["node", "services/analytics/src/index.js"]
+
+  dashboard:
+    <<: *service
+    command: ["node", "services/dashboard/src/index.js"]
+    environment:
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: info
+      ORDERS_API_URL: http://localhost:3000
+    ports:
+      - "8080:8080"
+
+volumes:
+  redis-data:

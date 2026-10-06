@@ -1,0 +1,15 @@
+{
+  "name": "@mateshop/orders",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@mateshop/contracts": "1.0.0",
+    "@mateshop/event-bus": "1.0.0",
+    "express": "^4.21.2"
+  }
+}

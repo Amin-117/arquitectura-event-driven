@@ -1,0 +1,36 @@
+{
+  "name": "mateshop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tienda ficticia para demostrar arquitectura orientada a eventos con Redis Streams",
+  "workspaces": [
+    "packages/*",
+    "services/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "help": "node scripts/help.js",
+    "up": "docker compose up --build -d && node scripts/info.js",
+    "down": "docker compose --profile extra down -v --remove-orphans",
+    "order": "node scripts/order.js normal",
+    "order-rejected": "node scripts/order.js rechazado",
+    "order-nostock": "node scripts/order.js sin-stock",
+    "burst": "node scripts/scene.js burst",
+    "duplicate": "node scripts/scene.js duplicate",
+    "poison": "node scripts/scene.js poison",
+    "kill-notifications": "docker compose stop notifications",
+    "revive-notifications": "docker compose start notifications",
+    "add-analytics": "docker compose --profile extra up -d analytics",
+    "scale-payments": "docker compose up -d --scale payments=2 --no-recreate",
+    "logs": "docker compose --profile extra logs -f --tail=30",
+    "reset": "node scripts/scene.js reset"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.3"
+  }
+}

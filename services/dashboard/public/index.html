@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MateShop en vivo</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧉</text></svg>" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <span class="logo">🧉</span>
+        <div>
+          <h1>MateShop <span class="muted">· eventos en vivo</span></h1>
+          <p class="subtitle">Coreografía sobre Redis Streams · CloudEvents 1.0</p>
+        </div>
+      </div>
+      <div class="counters">
+        <div class="counter"><span class="value" id="m-total">0</span><span class="label">eventos totales</span></div>
+        <div class="counter"><span class="value" id="m-pending">0</span><span class="label">pendientes (lag)</span></div>
+        <div class="counter warn"><span class="value" id="m-duplicates">0</span><span class="label">duplicados ignorados</span></div>
+        <div class="counter danger"><span class="value" id="m-dlq">0</span><span class="label">eventos en DLQ</span></div>
+      </div>
+      <div class="conn" id="conn"><span class="dot"></span><span id="conn-text">conectando…</span></div>
+    </header>
+
+    <main class="grid">
+      <section class="card diagram-card">
+        <h2>Arquitectura <span class="hint">cada bolita es un evento</span></h2>
+        <svg id="diagram" viewBox="0 0 1000 600" role="img" aria-label="Diagrama de servicios alrededor del broker">
+          <defs>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
+          <g id="edges"></g>
+          <g id="nodes"></g>
+          <g id="dots"></g>
+          <g id="labels"></g>
+        </svg>
+        <div class="legend" id="legend"></div>
+      </section>
+
+      <section class="card timeline-card">
+        <h2>Línea de tiempo <span class="hint">clic en un evento para ver el JSON</span></h2>
+        <ol id="timeline" class="timeline"></ol>
+      </section>
+
+      <section class="card scenes-card">
+        <h2>Escenas <span class="hint">atajos de teclado 1–7</span></h2>
+        <div class="scenes-body">
+        <div class="scenes">
+          <button data-scene="normal" class="scene"><kbd>1</kbd> Pedido normal</button>
+          <button data-scene="rechazado" class="scene"><kbd>2</kbd> Pedido que excede el límite</button>
+          <button data-scene="sin-stock" class="scene"><kbd>3</kbd> Pedido sin stock (TERMO-04)</button>
+          <button data-scene="rafaga" class="scene"><kbd>4</kbd> Ráfaga de 10 pedidos</button>
+          <button data-scene="duplicate" class="scene warn"><kbd>5</kbd> Reenviar último evento (duplicado)</button>
+          <button data-scene="poison" class="scene danger"><kbd>6</kbd> Evento envenenado → DLQ</button>
+          <button data-scene="reset" class="scene ghost"><kbd>7</kbd> Reiniciar demo</button>
+        </div>
+        <div class="terminal">
+          <h3>Escenas por terminal <span class="hint">con make: mismo nombre</span></h3>
+          <ul id="terminal-commands"></ul>
+        </div>
+        </div>
+      </section>
+
+      <section class="card orders-card">
+        <h2>Pedidos</h2>
+        <div class="table-wrap">
+          <table class="orders">
+            <thead>
+              <tr><th>Pedido</th><th>Cliente</th><th>Ítems</th><th class="num">Total</th><th>Estado</th><th>Detalle</th></tr>
+            </thead>
+            <tbody id="orders"></tbody>
+          </table>
+          <p class="empty" id="orders-empty">Todavía no hay pedidos. Tocá <strong>Pedido normal</strong>.</p>
+        </div>
+      </section>
+
+      <section class="card services-card">
+        <h2>Servicios <span class="hint">heartbeat cada 2 s</span></h2>
+        <ul id="services" class="services"></ul>
+        <h3>Consumer groups</h3>
+        <table class="groups">
+          <thead><tr><th>Grupo</th><th class="num">Pend.</th><th class="num">Lag</th></tr></thead>
+          <tbody id="groups"></tbody>
+        </table>
+      </section>
+    </main>
+
+    <dialog id="modal">
+      <div class="modal-head">
+        <h2 id="modal-title">Evento</h2>
+        <button id="modal-close" class="ghost" aria-label="Cerrar">✕</button>
+      </div>
+      <pre id="modal-json"></pre>
+    </dialog>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
