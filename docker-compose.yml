@@ -38,6 +38,8 @@ services:
   inventory:
     <<: *service
     command: ["node", "services/inventory/src/index.js"]
+    ports:
+      - "3001:3001"
 
   notifications:
     <<: *service

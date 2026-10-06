@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { OrderRequestSchema, correlationIdFor, spanishErrors } from '@mateshop/contracts'
+import { OrderRequestSchema, CATALOG_BY_SKU, priceOf, correlationIdFor, spanishErrors } from '@mateshop/contracts'
 import { deleteKeys } from '@mateshop/event-bus'
 
 const orderKey = (orderId) => `orders:${orderId}`
@@ -11,7 +11,10 @@ const INDEX_KEY = 'orders:index'
  * @property {string} orderId
  * @property {string} customer
  * @property {import('@mateshop/contracts').OrderItem[]} items
- * @property {number} total
+ * @property {number} total          calculado con el catálogo, nunca el que manda el cliente
+ * @property {string} [email]
+ * @property {string} [address]
+ * @property {string} [cardLast4]
  * @property {OrderStatus} status
  * @property {string} reason
  * @property {string} createdAt
@@ -36,17 +39,31 @@ export function createOrdersService({ bus, redis, logger }) {
     if (!parsed.success) {
       throw new InvalidOrderError(parsed.error.issues.map((i) => `${i.path.join('.') || 'body'}: ${i.message}`))
     }
-    const orderId = randomUUID().slice(0, 8)
-    const { customer, items, total } = parsed.data
-    /** @type {Order} */
-    const order = { orderId, customer, items, total, status: 'PENDING', reason: '', createdAt: new Date().toISOString() }
+    const { customer, items, email, address, cardNumber } = parsed.data
+    const unknown = items.filter((i) => !CATALOG_BY_SKU[i.sku]).map((i) => i.sku)
+    if (unknown.length) throw new InvalidOrderError([`producto desconocido: ${unknown.join(', ')}`])
 
+    // Seguridad: el precio sale del catálogo. El total que manda el navegador se ignora.
+    const total = priceOf(items)
+    // De la tarjeta solo se conservan los últimos 4 dígitos: el número completo nunca viaja en un evento.
+    const cardLast4 = cardNumber ? cardNumber.slice(-4) : undefined
+    const orderId = randomUUID().slice(0, 8)
+    /** @type {Order} */
+    const order = {
+      orderId, customer, items, total, email, address, cardLast4,
+      status: 'PENDING', reason: '', createdAt: new Date().toISOString()
+    }
+
+    const stored = Object.fromEntries(Object.entries(order).filter(([, v]) => v !== undefined))
     await redis
       .multi()
-      .hset(orderKey(orderId), { ...order, items: JSON.stringify(items), total: String(total) })
+      .hset(orderKey(orderId), { ...stored, items: JSON.stringify(items), total: String(total) })
       .zadd(INDEX_KEY, Date.now(), orderId)
       .exec()
-    await bus.publish('order.created', { orderId, customer, items, total }, { correlationid: correlationIdFor(orderId) })
+    const data = Object.fromEntries(
+      Object.entries({ orderId, customer, items, total, email, cardLast4 }).filter(([, v]) => v !== undefined)
+    )
+    await bus.publish('order.created', data, { correlationid: correlationIdFor(orderId) })
     logger.info({ correlationid: correlationIdFor(orderId), orderId }, 'pedido creado en PENDING')
     return order
   }

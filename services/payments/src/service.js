@@ -7,25 +7,29 @@ export const PAYMENT_LIMIT = 100000
 const paymentKey = (orderId) => `payments:${orderId}`
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+/** Reglas del "banco" simulado: devuelve el motivo del rechazo, o null si el pago se aprueba. */
+export function rejectionReason({ total, cardLast4 }) {
+  if (cardLast4 === '0000') return 'fondos insuficientes'
+  if (total > PAYMENT_LIMIT) return 'límite excedido'
+  return null
+}
+
 /**
  * Servicio de pagos: dueño del estado `payments:*`.
  * @param {{ bus: ReturnType<typeof import('@mateshop/event-bus').createEventBus>, redis: import('ioredis').Redis, delayMs?: [number, number] }} ctx
  */
 export function createPaymentsService({ bus, redis, delayMs = [300, 900] }) {
   bus.on('order.created', async (event) => {
-    const { orderId, customer, items, total } = event.data
+    const { orderId, customer, items, total, cardLast4 } = event.data
 
     // Demora simulada del "banco" para que el flujo se vea en el panel.
     const [min, max] = delayMs
     await sleep(min + Math.random() * (max - min))
 
-    if (total > PAYMENT_LIMIT) {
-      await redis.hset(paymentKey(orderId), { status: 'REJECTED', total: String(total), customer })
-      await bus.publish(
-        'payment.rejected',
-        { orderId, customer, total, reason: 'límite excedido' },
-        { correlationid: event.correlationid }
-      )
+    const reason = rejectionReason({ total, cardLast4 })
+    if (reason) {
+      await redis.hset(paymentKey(orderId), { status: 'REJECTED', total: String(total), customer, reason })
+      await bus.publish('payment.rejected', { orderId, customer, total, reason }, { correlationid: event.correlationid })
       return
     }
 

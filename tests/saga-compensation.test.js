@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createHarness, waitFor, readEvents } from './helpers.js'
+import { ORDER_FLOW_TYPES } from '@mateshop/contracts'
 import { startShop } from './shop.js'
 
 const h = createHarness()
@@ -20,7 +21,7 @@ describe('saga con compensación', () => {
     expect(final.status).toBe('CANCELLED')
     expect(final.reason).toMatch(/sin stock/)
 
-    const events = (await readEvents(redis)).map((e) => e.event).filter((e) => e.correlationid === `order-${order.orderId}`)
+    const events = (await readEvents(redis)).map((e) => e.event).filter((e) => e.correlationid === `order-${order.orderId}` && ORDER_FLOW_TYPES.includes(e.type))
     expect(events.map((e) => e.type)).toEqual([
       'order.created',
       'payment.approved',

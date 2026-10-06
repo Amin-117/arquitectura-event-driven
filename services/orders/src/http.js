@@ -25,7 +25,8 @@ export function createHttpApp(orders, logger) {
     res.json({
       servicio: 'orders',
       endpoints: ['POST /orders', 'GET /orders', 'GET /orders/:id', 'GET /health'],
-      ejemplo: { customer: 'Ana', items: [{ sku: 'MATE-01', qty: 1 }], total: 15000 }
+      ejemplo: { customer: 'Ana', email: 'ana@ejemplo.com', cardNumber: '4111111111111111', items: [{ sku: 'MATE-01', qty: 1 }] },
+      nota: 'el total lo calcula el servidor con el catálogo'
     })
   })
 
@@ -41,6 +42,7 @@ export function createHttpApp(orders, logger) {
         .json({
           orderId: order.orderId,
           status: order.status,
+          total: order.total,
           correlationid: `order-${order.orderId}`,
           mensaje: 'Pedido recibido: se procesa de forma asíncrona'
         })
