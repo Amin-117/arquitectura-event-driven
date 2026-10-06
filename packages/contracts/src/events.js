@@ -187,7 +187,9 @@ export const SUBSCRIPTIONS = {
   payments: ['order.created', 'stock.failed', 'demo.reset'],
   inventory: ['payment.approved', 'demo.reset'],
   notifications: [...ORDER_FLOW_TYPES, 'demo.reset'],
-  analytics: ['order.confirmed', 'demo.reset']
+  analytics: ['order.confirmed', 'demo.reset'],
+  // La tienda es un modelo de lectura: arma su propia vista con los eventos (ver ADR 0006).
+  storefront: [...ORDER_FLOW_TYPES, 'stock.updated', 'notification.sent', 'demo.reset']
 }
 
 /** Servicios que procesan un tipo dado. */

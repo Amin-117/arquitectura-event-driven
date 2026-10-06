@@ -19,6 +19,13 @@ describe('reposición de stock', () => {
     expect(events).toContainEqual(expect.objectContaining({ type: 'stock.replenished', data: { sku: 'TERMO-04', qty: 5, available: 5 } }))
     const updates = events.filter((e) => e.type === 'stock.updated' && e.data.sku === 'TERMO-04')
     expect(updates.at(-1).data.available).toBe(5)
+
+    // El modelo de lectura de la tienda ve el valor nuevo (solo por eventos).
+    await waitFor(async () => {
+      const termo = (await shop.storefront.catalog()).find((p) => p.sku === 'TERMO-04')
+      return termo.available === 5
+    }, { message: 'storefront ve TERMO-04 = 5' })
+    expect(await redis.hget('storefront:stock', 'TERMO-04')).toBe('5')
   })
 
   it('una reserva exitosa publica stock.updated de los productos afectados', async () => {

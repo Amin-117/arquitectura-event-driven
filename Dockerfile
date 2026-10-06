@@ -12,6 +12,7 @@ COPY services/inventory/package.json services/inventory/
 COPY services/notifications/package.json services/notifications/
 COPY services/analytics/package.json services/analytics/
 COPY services/dashboard/package.json services/dashboard/
+COPY services/storefront/package.json services/storefront/
 RUN npm ci --omit=dev --no-audit --no-fund
 
 COPY packages packages
